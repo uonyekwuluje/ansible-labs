@@ -1,0 +1,56 @@
+---
+- name: Wait for 5 Second and Reboot
+  shell: "sleep 5 && reboot"
+  async: 1
+  poll: 0
+  tags: "worker"
+
+- name: Wait for the reboot to complete if there was a change.
+  wait_for_connection:
+    connect_timeout: 20
+    sleep: 5
+    delay: 5
+    timeout: 300
+  tags: "worker"
+   
+- name: Copy Kubernetes Repo
+  copy:
+    src: kubernetes.repo
+    dest: /etc/yum.repos.d/kubernetes.repo
+  tags: "worker"
+
+- name: Update All
+  dnf:
+    name: "*"
+    state: latest
+  tags: "worker"
+
+- name: Install Packages Old Way
+  shell: |
+     dnf install -y kubeadm-{{ kube_version }} kubelet-{{ kube_version }} kubectl-{{ kube_version }} --disableexcludes=kubernetes
+     dnf versionlock kubeadm kubelet kubectl
+  tags: "worker"
+
+- name: Copy Kubelet Config
+  copy:
+    src: kubelet
+    dest: /etc/sysconfig/kubelet
+  tags: "worker"
+    
+- name: Enable and restart kubelet
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+  tags: "worker"
+
+- name: Copy join command from Ansiblehost to the worker nodes.
+  copy:
+     src: "{{ k8s_join_file }}"
+     dest: "{{ k8s_join_file }}"
+     mode: 0777
+  tags: "worker"
+
+- name: Join the worker nodes to the cluster
+  command: sudo "{{ k8s_join_file }}"
+  tags: "worker"      

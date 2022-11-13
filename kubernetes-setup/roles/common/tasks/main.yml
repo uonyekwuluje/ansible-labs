@@ -1,0 +1,4 @@
+---
+- import_tasks: package_requirements.yml
+- import_tasks: install_docker.yml
+- import_tasks: k8s-reqs.yml

@@ -1,0 +1,108 @@
+---
+- name: Copy Kubernetes Repo
+  copy:
+    src: kubernetes.repo
+    dest: /etc/yum.repos.d/kubernetes.repo
+  tags: "master"
+
+- name: Update All
+  dnf:
+    name: "*"
+    state: latest
+  tags: "master"
+
+#- name: Install Kubernetes
+#  dnf: 
+#    name: "{{ item }}"
+#    disable_excludes: "kubernetes"  
+#  with_items:
+#  - "kubeadm-{{ kube_version }}"
+#  - "kubelet-{{ kube_version }}"
+#  - "kubectl-{{ kube_version }}"
+#  - "cri-tools-{{ kube_version }}"
+#  tags: "master"
+   
+- name: Install Packages Old Way
+  shell: |
+     dnf install -y kubeadm-{{ kube_version }} kubelet-{{ kube_version }} kubectl-{{ kube_version }} --disableexcludes=kubernetes
+     dnf versionlock kubeadm kubelet kubectl
+  tags: "master"
+
+- name: Copy Kubelet Config
+  copy:
+    src: kubelet
+    dest: /etc/sysconfig/kubelet
+  tags: "master"
+    
+- name: Enable and restart kubelet
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+  tags: "master"
+
+- name: create .kube directory
+  file:
+     path: "/home/{{ user }}/.kube"
+     state: directory
+     mode: 0755
+  tags: "master"
+
+- name: Initialize the cluster
+  shell: |
+     kubeadm init --ignore-preflight-errors=swap
+  args:
+    chdir: "/home/{{ user }}"
+    creates: cluster_initialized.txt
+  tags: "master"  
+
+- name: copies admin.conf to user's kube config
+  copy:
+     src: /etc/kubernetes/admin.conf
+     dest: "/home/{{ user }}/.kube/config"
+     remote_src: yes
+     owner: fedora
+  tags: "master"      
+
+- name: Create Calico Directory
+  file:
+     path: "{{ calico_install_dir }}"
+     state: directory
+     owner: "{{user }}" 
+     group: "{{ user }}"  
+     mode: 0755
+  tags: "master"
+
+- name : Download Calico CNI 
+  unarchive:
+    src: "{{ calico_url  }}"
+    dest: "{{ calico_install_dir }}"
+    mode: 0755
+    remote_src: yes
+    extra_opts: [--strip-components=1]  
+  tags: "master"
+
+- name: Install Calico
+  become: yes
+  become_user: "{{ user }}"
+  shell: |
+    kubectl apply -f manifests/calico.yaml
+  args:
+     chdir: "{{ calico_install_dir }}"
+  tags: "master"
+
+- name: Get the token for joining the worker nodes
+  become: yes
+  become_user: "{{ user }}"
+  shell: kubeadm token create  --print-join-command
+  register: kubernetes_join_command
+  tags: "master, join"
+
+- debug:
+    msg: "{{ kubernetes_join_command.stdout }}"
+  tags: "master, join"
+
+- name: Copy join command to local file.
+  become: yes 
+  local_action: copy content="{{ kubernetes_join_command.stdout_lines[0] }}" dest="{{ k8s_join_file }}" mode=0777
+  tags: "master, join"  

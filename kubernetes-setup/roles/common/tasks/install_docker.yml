@@ -1,0 +1,53 @@
+---
+- name: install docker repository
+  command: dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+  tags: "common" 
+
+- name: install docker
+  dnf:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - docker-ce
+  - python3-pip  
+  - containerd.io
+  tags: "common"
+
+- name: Creates directory
+  file:
+    path: /etc/docker
+    state: directory
+  tags: "common"
+
+- name: Copy docker json
+  copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+  tags: "common"
+
+- name: Copy Containerd Config
+  copy:
+    src: config.toml
+    dest: /etc/containerd/config.toml
+  tags: "common"
+
+- name: Enable Docker Service
+  systemd:
+    name: docker
+    enabled: yes
+    state: started
+  tags: "common"
+
+- name: Enable and restart containerd
+  systemd:
+    name: containerd
+    enabled: yes
+    state: started
+  tags: "common"
+
+- name: adding existing user '{{ user }}' to group docker
+  user:
+    name: '{{ user }}'
+    groups: docker
+    append: yes
+  tags: "common"      

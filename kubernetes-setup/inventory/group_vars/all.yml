@@ -1,0 +1,7 @@
+---
+user: "fedora"
+kube_version: "1.24.8-0.x86_64" 
+calico_version: "v3.24.1"
+calico_url: "https://github.com/projectcalico/calico/releases/download/{{ calico_version }}/release-{{ calico_version }}.tgz"
+calico_install_dir: "/opt/calico"
+k8s_join_file: "/tmp/kubernetes_join_command"  

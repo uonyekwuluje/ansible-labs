@@ -1,0 +1,40 @@
+---
+- name: Configure Hosts File
+  hosts: k8sstack
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+  - name: Update Hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+      use: systemd  
+    tags: "common"
+
+- name: Configure Kubernetes Stack Nodes
+  hosts: k8sstack
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+  - role: common
+
+- name: Configure Kubernetes Master Node
+  hosts: k8smaster
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+  - role: kubernetes/master
+
+- name: Configure Kubernetes Worker Node
+  hosts: k8sworkers
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+  - role: kubernetes/agent

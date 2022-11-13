@@ -1,0 +1,2 @@
+---
+- import_tasks: k8s-master.yml  

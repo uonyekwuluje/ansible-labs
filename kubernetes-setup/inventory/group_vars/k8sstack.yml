@@ -1,0 +1,4 @@
+---
+ansible_connection: ssh
+ansible_user: fedora
+ansible_python_interpreter: 'python3'

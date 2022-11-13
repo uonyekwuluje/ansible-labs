@@ -1,0 +1,91 @@
+---
+- name: Copy Sysctl Kubernetes
+  copy:
+    src: kubernetes.conf
+    dest: /etc/sysctl.d/kubernetes.conf
+  tags: "common"
+
+- name: Copy module overlay
+  copy:
+    src: k8s.conf
+    dest: /etc/modules-load.d/k8s.conf  
+  tags: "common"
+
+- name: Update Overlay
+  shell: |
+     modprobe overlay
+     modprobe br_netfilter
+     sysctl --system
+  tags: "common"
+
+- name: Check for rhgb      
+  lineinfile:
+    backup: true
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX=".*rhgb'
+    state: absent
+  check_mode: true
+  register: rhgb_cmdline_check
+  changed_when: false
+  tags: "common"
+
+- name: Insert rhgb if missing
+  lineinfile:
+    backrefs: true
+    path: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=\".*)\"$"
+    line: '\1 rhgb"'
+  when: rhgb_cmdline_check.found == 0
+  tags: "common"
+
+- name: Check for quiet  
+  lineinfile:
+    backup: true
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX=".*quiet'
+    state: absent
+  check_mode: true
+  register: quiet_cmdline_check
+  changed_when: false
+  tags: "common" 
+
+- name: Insert quiet if missing
+  lineinfile:
+    backrefs: true
+    path: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=\".*)\"$"
+    line: '\1 quiet"'
+  when: quiet_cmdline_check.found == 0
+  tags: "common"
+
+- name: Check for cgroup
+  lineinfile:
+    backup: true
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX=".*systemd.unified_cgroup_hierarchy=0'
+    state: absent
+  check_mode: true
+  register: cgroup_cmdline_check
+  changed_when: false
+  tags: "common" 
+
+- name: Insert cgroup if missing
+  lineinfile:
+    backrefs: true
+    path: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=\".*)\"$"
+    line: '\1 systemd.unified_cgroup_hierarchy=0"'
+  when: cgroup_cmdline_check.found == 0
+  tags: "common"
+
+- name: Update Grub
+  shell: |
+     grub2-mkconfig -o /boot/grub2/grub.cfg
+     touch /etc/systemd/zram-generator.conf 
+  tags: "common"
+
+- name: Wait for 5 Second and Reboot 
+  shell: "sleep 5 && reboot"
+  async: 1
+  poll: 0
+  tags: "common"  

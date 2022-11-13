@@ -1,0 +1,67 @@
+---
+- name: Install Dev Tools |  'Development tools' package group
+  dnf:
+    name: "@Development tools"
+  tags: "common"
+
+- name: Installing Dependencies 
+  dnf: 
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - dnf-plugins-core  
+    - liberation-fonts 
+    - tlp 
+    - tlp-rdw 
+    - sysstat 
+    - vim 
+    - telnet 
+    - htop 
+    - copyq 
+    - unzip 
+    - p7zip 
+    - jq 
+    - gcc
+    - python3-apt 
+    - kernel-devel 
+    - kernel-headers 
+    - dnf-plugins-core 
+    - python3-pip 
+    - iproute-tc 
+    - rpm-ostree
+    - net-tools 
+    - wget 
+    - curl 
+    - telnet 
+    - nfs-utils 
+    - yum-utils 
+    - device-mapper-persistent-data 
+    - lvm2 
+    - python3-dnf-plugin-versionlock
+    - dnf-plugin-versionlock
+    - chrony
+    - firewalld  
+  tags: "common"
+ 
+- name: Disable Select Services
+  systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  with_items:
+  - firewalld
+  tags: "common"
+
+- name: Disabling SELinux
+  selinux:
+     state: disabled
+  tags: "common"
+
+- name: Print the changes in Configurtion file 
+  command: grep SELINUX /etc/sysconfig/selinux
+  register: sevalue
+  tags: "common"
+
+- debug:
+        var: sevalue.stdout_lines
+  tags: "common"
