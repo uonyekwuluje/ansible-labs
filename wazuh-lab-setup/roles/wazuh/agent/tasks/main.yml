@@ -1,0 +1,32 @@
+---
+- name: Import Wazuh apt key
+  apt_key:
+    url: "{{ wazuh_agent_key  }}"
+    state: present
+  become: true
+
+- name: Install Wazuh 4.x deb repository
+  apt_repository:
+    repo: "{{ wazuh_deb_repo }}"
+    state: present
+  become: true
+
+- name: Install Agent
+  shell: 
+      cmd: WAZUH_MANAGER="{{ wazuh_server }}" sudo apt-get install -y wazuh-agent
+  become: true
+
+- name: Update OSSEC Config
+  become: yes
+  replace: 
+     path: "/var/ossec/etc/ossec.conf"
+     regexp: 'MANAGER_IP'
+     replace: "{{ wazuh_server }}"
+     backup: yes
+
+- name: Enable Wazuh Agent Services
+  systemd:
+    name: "wazuh-agent"
+    enabled: yes
+    state: restarted
+  become: true

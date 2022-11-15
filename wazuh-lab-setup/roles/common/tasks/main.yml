@@ -1,0 +1,16 @@
+---
+- import_tasks: rhel_requirements.yml
+  when:
+  - ansible_distribution == 'CentOS'
+
+- import_tasks: debian_requirements.yml
+  when:
+  - ansible_os_family == 'Debian'
+
+- import_tasks: fedora_requirements.yml
+  when:
+  - ansible_distribution == 'Fedora'
+
+- import_tasks: almalinux_requirements.yml
+  when:
+  - ansible_distribution == 'AlmaLinux'

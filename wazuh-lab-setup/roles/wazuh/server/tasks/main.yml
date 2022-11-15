@@ -1,0 +1,37 @@
+---
+- name: Check Installed Status
+  shell: 
+      cmd: /var/ossec/bin/wazuh-control -j info | jq -r .data[].WAZUH_TYPE | grep server
+  register: installed
+  no_log: true
+  become: true
+  ignore_errors: yes
+
+- name: Print
+  debug:
+     msg="{{ installed.stdout }}"      
+
+- name: Download Wazuh Script installer
+  get_url:
+    url: "{{ wazuh_script_url }}"
+    dest: "{{ wazuh_installer_script }}"
+    mode: 'u+rwx'
+  when: installed.stdout != "server"
+  register: download
+
+- name: Run the install script
+  shell: "{{ wazuh_installer_script }} -a" 
+  when: download.changed
+
+- name: Enable Wazuh Services
+  systemd:
+    name: "wazuh-manager"
+    enabled: yes
+    state: restarted
+  become: true
+  when: download.changed
+
+- name: Remove "{{ wazuh_installer_script }}"
+  file:
+    path: "{{ wazuh_installer_script }}"
+    state: absent

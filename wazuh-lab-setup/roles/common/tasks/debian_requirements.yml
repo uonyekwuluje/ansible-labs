@@ -1,0 +1,46 @@
+---
+- name: Update apt cache.
+  apt: update_cache=yes cache_valid_time=86400
+  become: true
+
+- name: Installing Dependencies
+  apt: 
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - python3-apt 
+    - openjdk-11-jdk
+    - libfontconfig
+    - libffi-dev
+    - libncurses5-dev
+  become: true
+
+- name: Installing Ubuntu Dependencies
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - gnupg2
+    - git-core
+    - zlib1g-dev 
+    - build-essential 
+    - libssl-dev 
+    - libreadline-dev 
+    - libyaml-dev 
+    - libsqlite3-dev 
+    - sqlite3 
+    - libxml2-dev 
+    - libxslt1-dev 
+    - libcurl4-openssl-dev 
+    - software-properties-common 
+    - libffi-dev 
+    - nodejs 
+    - yarn
+    - libffi-dev
+    - libncurses5-dev
+    - jq
+  become: true
+
+- name: Disable UFW
+  ufw:
+    state: disabled

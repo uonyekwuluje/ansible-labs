@@ -1,0 +1,66 @@
+---
+- name: Configure Hosts File
+  hosts: wazuhstack
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+  - name: Update the /etc/hosts file with node name
+    become: yes
+    become_user: root
+    lineinfile:
+        path: "/etc/hosts"
+        regexp: "{{ hostvars[item]['ansible_default_ipv4']['address'] }}\t{{ hostvars[item]['inventory_hostname']}}"
+        line: "{{ hostvars[item]['ansible_default_ipv4']['address'] }}\t{{ hostvars[item]['inventory_hostname']}}"
+        state: present
+        backup: yes
+    register: etchostsupdate
+    when: ansible_hostname != item or ansible_hostname == item
+    with_items: "{{groups['wazuhstack']}}"
+
+
+- name: Configure Wazuh Stack Nodes
+  hosts: wazuhstack
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+  - role: common
+    when: >
+      ansible_distribution == 'Ubuntu' and 
+          (ansible_distribution_version == '18.04' or 
+           ansible_distribution_version == '20.04' or 
+           ansible_distribution_version == '22.04') or
+      ansible_distribution == 'AlmaLinux' and (ansible_distribution_version == '8.6')
+
+
+- name: Configure Wazuh Server
+  hosts: wazuh_server
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+  - role: roles/wazuh/server/
+    when: >
+      ansible_distribution == 'Ubuntu' and
+          (ansible_distribution_version == '18.04' or
+           ansible_distribution_version == '20.04' or
+           ansible_distribution_version == '22.04') 
+
+
+- name: Configure Wazuh Nodes
+  hosts: wazuh_agents
+  gather_facts: true
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+  - role: roles/wazuh/agent/
+    when: >
+      ansible_distribution == 'Ubuntu' and
+          (ansible_distribution_version == '18.04' or
+           ansible_distribution_version == '20.04' or
+           ansible_distribution_version == '22.04')

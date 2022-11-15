@@ -1,0 +1,79 @@
+---
+- name: Import Security Keys | Free
+  ansible.builtin.rpm_key:
+     state: present
+     key: https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-fedora-2020
+
+- name: Import Security Keys | Non-Free
+  ansible.builtin.rpm_key:
+     state: present
+     key: https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020
+
+- name: Installing Repositories 
+  dnf: 
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_version }}.noarch.rpm"
+  - "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_distribution_version }}.noarch.rpm"
+  ignore_errors: True
+
+- name: Install Dev Tools |  'Development tools' package group
+  dnf:
+    name: "@Development tools"
+
+- name: Installing Dependencies 
+  dnf: 
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - rpmfusion-free-release-tainted
+    - rpmfusion-nonfree-release-tainted
+    - liberation-fonts 
+    - tlp 
+    - tlp-rdw 
+    - sysstat 
+    - vim 
+    - telnet 
+    - htop 
+    - copyq 
+    - unzip 
+    - p7zip 
+    - jq 
+    - gcc 
+    - kernel-devel 
+    - kernel-headers 
+    - dnf-plugins-core 
+    - python3-pip 
+    - iproute-tc 
+    - rpm-ostree
+    - java-11-openjdk.x86_64 
+    - java-11-openjdk-devel.x86_64 
+
+
+- name: Disable Select Services
+  systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  with_items:
+  - firewalld
+  - systemd-resolved
+
+- name: Disabling SELinux
+  selinux:
+     state: disabled
+  register: selinuxdisabled
+
+- name: Print the changes in Configurtion file 
+  command: grep SELINUX /etc/sysconfig/selinux
+  register: sevalue
+
+- debug:
+        var: sevalue.stdout_lines
+
+- name: Wait for 5 Second and Reboot 
+  shell: "sleep 5 && reboot"
+  async: 1
+  poll: 0
+  when: selinuxdisabled is changed

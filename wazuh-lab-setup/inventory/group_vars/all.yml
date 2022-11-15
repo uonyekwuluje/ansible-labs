@@ -1,0 +1,8 @@
+---
+wazuh_version: "4.3"
+wazuh_script_url: "https://packages.wazuh.com/{{ wazuh_version }}/wazuh-install.sh"
+wazuh_installer_script: "/tmp/wazuh-install.sh"
+wazuh_server: "wazuhserver"
+
+wazuh_agent_key: "https://packages.wazuh.com/key/GPG-KEY-WAZUH"
+wazuh_deb_repo: "deb https://packages.wazuh.com/4.x/apt/ stable main"

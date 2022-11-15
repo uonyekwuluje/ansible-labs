@@ -1,0 +1,4 @@
+---
+ansible_connection: ssh
+ansible_user: labuser
+ansible_python_interpreter: 'python3'
