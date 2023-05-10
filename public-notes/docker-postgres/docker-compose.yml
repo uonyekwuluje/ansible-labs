@@ -1,0 +1,36 @@
+---
+version: '3.9'
+
+services:
+  postgres-master:
+    image: postgres:12.0
+    env_file: config/master.env
+    container_name: postgres-master
+    hostname: postgres-master
+    restart: always
+    ports:
+    - 5432:5432
+    volumes:
+    - ./config/scripts/init-master.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+    - pgstack
+
+  postgres-slave:
+    depends_on:
+    - postgres-master
+    image: postgres:12.0
+    env_file: config/slave.env
+    container_name: postgres-slave
+    hostname: postgres-slave
+    restart: always
+    ports:
+    - 5433:5432
+    volumes:
+    - ./config/scripts/init-slave.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+    - pgstack
+
+
+networks:
+  pgstack:
+    driver: bridge
