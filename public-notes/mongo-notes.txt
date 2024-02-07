@@ -1,3 +1,119 @@
+
+
+
+# Docker Cleanup
+==============================
+docker rm -f $(docker ps -a -q)
+docker network rm $(docker network list -q)
+docker volume rm $(docker volume list -q)
+docker rmi $(docker images -q)
+docker system prune -a --volumes
+
+
+
+# Start Container | Stop Container
+----------------------------------------------------------
+docker-compose up -d      
+docker-compose up -d --force-recreate
+docker-compose up -d --force-recreate --remove-orphans
+docker-compose down
+docker-compose down --remove-orphans
+
+# Check Process
+---------------------------------------------------------
+docker-compose ps
+
+
+# Compose Labs
+---------------------------------------------------------
+mkdir -p mongodb/{data,logs}
+
+vim Makefile
+>> 
+create:
+	docker-compose up -d --force-recreate --remove-orphans
+
+status:
+	docker-compose ps
+
+destroy:
+	docker-compose down --remove-orphans
+	sudo rm -Rf mongodb/data/*
+	sudo rm -Rf mongodb/logs/*
+
+
+vim docker-compose.yml 
+>>
+---
+version: '3.9'
+
+services:
+  mongodb6:
+    image: mongo:6.0.13
+    restart: unless-stopped
+    hostname: mongodb6
+    container_name: mongodb6
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb6_data_container:/data/db
+
+  mongodb7:
+    image: mongo:7.0.5
+    restart: unless-stopped
+    hostname: mongodb7
+    container_name: mongodb7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - 27018:27017
+    volumes:
+      - mongodb7_data_container:/data/db
+
+
+volumes:
+   mongodb6_data_container:
+   mongodb7_data_container:
+
+
+
+
+
+
+
+
+# Connect
+----------------------------------------------------------
+docker exec -it mongodb6 /bin/bash
+mongosh --host localhost --port 27017 --username admin --password password --authenticationDatabase admin
+
+
+
+
+
+mongosh "mongodb://mongodb0.example.com:28015"
+mongosh --host 192.168.1.137 --port 27017
+mongosh --host 192.168.1.137 --port 27017 --username mongoadmin --authenticationDatabase admin
+mongosh --host 192.168.1.137 --port 27017 --username mongoadmin --authenticationDatabase admin --password password
+
+mongosh "mongodb://mongodb0.example.com:28015" --username alice --authenticationDatabase admin
+
+
+mongosh "mongodb://192.168.1.137:27017/?replicaSet=mongolab-rplset"
+mongosh "mongodb://192.168.1.137:27017,192.168.1.138:27017,192.168.1.139:27017/?replicaSet=mongolab-rplsetA"
+
+
+
+
+
+
+
+
+
 # Mongo Login
 ---------------------
 use admin
@@ -99,13 +215,26 @@ db.stud_tble.find({status: 'complete'})
 
 
 ============================================================================================================
+mongo-code.py
 from pymongo import MongoClient
+from bson import ObjectId
+from bson.json_util import dumps
+from bson.json_util import loads
+import json
+
+FETCHER_TMP_FILE1 = "/tmp/fetchjob1.json"
+FETCHER_TMP_FILE2 = "/tmp/fetchjob2.json"
 
 client = MongoClient(host = 'localhost:27017', username = 'admin', 
          password = 'password', authMechanism = 'SCRAM-SHA-1',
          serverSelectionTimeoutMS=10, connectTimeoutMS=20000)
 
-db = client.database
+m7client = MongoClient(host = 'localhost:27018', username = 'admin',
+         password = 'password', authMechanism = 'SCRAM-SHA-1',
+         serverSelectionTimeoutMS=10, connectTimeoutMS=20000)
+
+
+'''
 try:
     db.command("serverStatus")
 except Exception as e:
@@ -114,7 +243,7 @@ else:
     print("You are connected!")
     print(f"Mongo Server Version => {client.server_info()['version']}")
     #client.close()
-
+'''
 
 
 
@@ -124,12 +253,53 @@ def listDatabases():
         print(db)
 
 # List Collections in select database
-def listCollections():
-    empdb = client['employee']
+def listCollections(dbname):
+    db = client[dbname]
     print("List of collection")
     print("------------------")
-    for coll in empdb.list_collection_names():
+    for coll in db.list_collection_names():
         print(coll)
+
+# Retrieve Specific DOC
+def retrieveRecord(dbname):
+    db = client[dbname]
+    select_avenger = db.stud_tble.find({"_id": ObjectId("65c2f493ba34c1c7f4964023")})
+    print(select_avenger)
+    select_job = loads(dumps(select_avenger[0]))
+    print(select_job)
+
+    # Writing to file ORIG
+    with open(FETCHER_TMP_FILE1, "w", encoding='utf-8') as outfile:
+       outfile.write(dumps(select_job))
+
+    # Write to file NEW
+    dict_load = json.dumps(select_job, default=str, indent=4)
+    #print(dict_load)
+    with open(FETCHER_TMP_FILE2, "w", encoding='utf-8') as outfile:
+       outfile.write(dumps(dict_load))
+
+   # Load JSON from File
+    with open(FETCHER_TMP_FILE2) as file:
+        data = json.load(file)
+    print(data) 
+    print(type(data)) 
+    data = json.loads(data)
+    print(data)
+    print(type(data))
+
+    db7 = m7client[dbname]
+    db7cl = db7["stud_tble"]
+    db7cl.insert_one(data)
+    #dict_load = loads(dumps(fetcher_job))
+    #dict_load = json.dumps(dict_load[0], default=str, indent=4)
+    #print(dict_load)
+    #print(type(dict_load))
+    #dict_load = json.loads(dict_load)
+    #print(type(dict_load))
+
+
+
+
 
 # List Documents in select collection
 def listDocuments():
@@ -172,67 +342,9 @@ def updateDocument():
         print(doc)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-from pymongo import MongoClient
-from bson.objectid import ObjectId
-import time
-
-mongodb_server = "192.168.1.151"
-mongodb_port = "27017"
-mongodb_user = "admin"
-mongodb_password = "password"
-mongodb_database = "admin"
-
-client = MongoClient(f"mongodb://{mongodb_user}:{mongodb_password}@{mongodb_server}:{mongodb_port}")
-#db = client[mongodb_database]
-#try: 
-#    db.command("serverStatus")
-#except Exception as e: 
-#    print(e)
-#else: 
-#    print("You are connected!")
-
-found = ""
-select_collection = client["student_db"]["stud_tble"]
-while found != 'complete':
-    time.sleep(6)
-    get_rec_status = select_collection.find({'_id': ObjectId('65b5405a9f713f887b25d655')})
-    print(f"Object ID ['65b5405a9f713f887b25d655']: {get_rec_status[0]['status']}")
-    found = get_rec_status[0]['status']
-#for x in get_rec_status:
-#    print(x)
-
-
-
-#for x in select_collection.find():
-#    print(x)
-#print("-------------------------------------")
-#for x in select_collection.find({},{"_id": 0, "FirstName": 1, "LastName": 1}):
-#    print(x)
-
-
-client.close()
+if __name__ == '__main__':
+    database_name = "student_db"
+    #listDatabases()
+    #listCollections(database_name)
+    retrieveRecord(database_name)
 
