@@ -1,0 +1,238 @@
+# Mongo Login
+---------------------
+use admin
+db.auth("admin", "password")
+show dbs
+
+use student_db
+
+db.stud_tble.insert({
+ "firstName" : "Tony", 
+ "lastName" : "Stark",
+ "dateOfBirth": "1995-09-26",
+ "status": "complete",
+ "emailAddress" : "tonystark@avengers.com",
+ "courseGrades": [
+		{
+			"cource": "math-101",
+			"grade": "A"
+		},
+		{
+			"cource": "feg-101",
+			"grade": "C"
+		}
+ ]
+})
+
+
+db.stud_tble.insert({
+ "firstName" : "Benedict", 
+ "lastName" : "Cumberbatch",
+ "dateOfBirth": "1095-10-26",
+ "status": "complete",
+ "emailAddress" : "benedictcom@avengers.com",
+ "courseGrades": [
+		{
+			"cource": "math-101",
+			"grade": "D"
+		},
+		{
+			"cource": "feg-101",
+			"grade": "F"
+		}
+ ]
+})
+
+
+db.stud_tble.insert({
+ "firstName" : "Mark", 
+ "lastName" : "Rafallo",
+ "dateOfBirth": "05-05-2045",
+ "status": "error",
+ "emailAddress" : "mrafallo@avengers.com",
+ "courseGrades": [
+		{
+			"cource": "math-101",
+			"grade": "C"
+		},
+		{
+			"cource": "feg-101",
+			"grade": "B"
+		}
+ ]
+})
+
+
+# List All
+--------------------------------------
+db.stud_tble.find().forEach(printjson)
+db.stud_tble.find().pretty()
+db.stud_tble.find()
+
+# Update Collection
+--------------------------------------
+db.stud_tble.updateOne({_id: ObjectId('65b5405a9f713f887b25d655')}, { $set: {status: 'complete'}})
+db.stud_tble.updateOne({_id: ObjectId('65b5405a9f713f887b25d655')}, { $set: {dateOfBirth: '11-25-1945'}})
+>>
+{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 1,
+  modifiedCount: 1,
+  upsertedCount: 0
+}
+
+
+# Querry Collection
+--------------------------------------
+db.stud_tble.find({_id: ObjectId('65b5405a9f713f887b25d655')})
+db.stud_tble.find({status: 'complete'})
+>>
+
+
+
+
+
+
+
+
+
+
+============================================================================================================
+from pymongo import MongoClient
+
+client = MongoClient(host = 'localhost:27017', username = 'admin', 
+         password = 'password', authMechanism = 'SCRAM-SHA-1',
+         serverSelectionTimeoutMS=10, connectTimeoutMS=20000)
+
+db = client.database
+try:
+    db.command("serverStatus")
+except Exception as e:
+    print(e)
+else: 
+    print("You are connected!")
+    print(f"Mongo Server Version => {client.server_info()['version']}")
+    #client.close()
+
+
+
+
+# List Database in Mongo SB Server
+def listDatabases():
+    for db in client.list_databases():
+        print(db)
+
+# List Collections in select database
+def listCollections():
+    empdb = client['employee']
+    print("List of collection")
+    print("------------------")
+    for coll in empdb.list_collection_names():
+        print(coll)
+
+# List Documents in select collection
+def listDocuments():
+    select_collection = client["employee"]["employee_tble"]
+    for x in select_collection.find():
+        print(x)
+    print("-------------------------------------")
+    for x in select_collection.find({},{"_id": 0, "FirstName": 1, "LastName": 1}):
+        print(x)
+
+        # Delete document from collection
+def deleteDocument():
+    select_collection = client["employee"]["employee_tble"]
+    for doc in select_collection.find():
+        print(doc)
+    # Query to delete document
+    query = {'FirstName': 'Luke'}
+    # Delete one document
+    select_collection.delete_one(query)
+
+    print("Documents in Collection after delete_one()")
+    print("-------------------------------------------")
+    for doc in select_collection.find():
+            print(doc)
+
+# Update Documents in collection
+def updateDocument():
+    select_collection = client["employee"]["employee_tble"]
+    for doc in select_collection.find():
+        print(doc)
+    # Query to Update document
+    id_criteria = {'_id': 'emp002'}
+    query = {'_id': 'emp002', 'FirstName': 'Christopher', 'LastName': 'Helmsworth', 'Sorties': 814}
+    # Update one document
+    select_collection.update_one(id_criteria, {"$set": query})
+
+    print("Documents in Collection after updating")
+    print("--------------------------------------")
+    for doc in select_collection.find():
+        print(doc)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+import time
+
+mongodb_server = "192.168.1.151"
+mongodb_port = "27017"
+mongodb_user = "admin"
+mongodb_password = "password"
+mongodb_database = "admin"
+
+client = MongoClient(f"mongodb://{mongodb_user}:{mongodb_password}@{mongodb_server}:{mongodb_port}")
+#db = client[mongodb_database]
+#try: 
+#    db.command("serverStatus")
+#except Exception as e: 
+#    print(e)
+#else: 
+#    print("You are connected!")
+
+found = ""
+select_collection = client["student_db"]["stud_tble"]
+while found != 'complete':
+    time.sleep(6)
+    get_rec_status = select_collection.find({'_id': ObjectId('65b5405a9f713f887b25d655')})
+    print(f"Object ID ['65b5405a9f713f887b25d655']: {get_rec_status[0]['status']}")
+    found = get_rec_status[0]['status']
+#for x in get_rec_status:
+#    print(x)
+
+
+
+#for x in select_collection.find():
+#    print(x)
+#print("-------------------------------------")
+#for x in select_collection.find({},{"_id": 0, "FirstName": 1, "LastName": 1}):
+#    print(x)
+
+
+client.close()
+
