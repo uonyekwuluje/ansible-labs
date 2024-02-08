@@ -348,3 +348,44 @@ if __name__ == '__main__':
     #listCollections(database_name)
     retrieveRecord(database_name)
 
+
+
+
+------------------------------------------------------------------------
+# Retrieve Specific DOC
+def retrieveRecord(dbname):
+    db = client[dbname]
+    select_avenger = db.stud_tble.find({"_id": ObjectId("65c49907a0dd0f60cdf636b4")})
+    print(select_avenger)
+    select_job = loads(dumps(select_avenger[0]))
+    print(select_job)
+
+    # Writing to file ORIG
+    with open(FETCHER_TMP_FILE1, "w", encoding='utf-8') as outfile:
+       outfile.write(str(select_job))
+       #outfile.write(dumps(select_job))
+
+    ## Write to file NEW
+    #dict_load = json.dumps(dict_load)
+    #print(dict_load)
+    #with open(FETCHER_TMP_FILE2, "w", encoding='utf-8') as outfile:
+    #   outfile.write(dumps(dict_load))
+
+    ## Write to file NEW
+    #dict_load = json.dumps(select_job, default=str, indent=4)
+    ##print(dict_load)
+    #with open(FETCHER_TMP_FILE2, "w", encoding='utf-8') as outfile:
+    #   outfile.write(dumps(dict_load))
+
+    # Load JSON from File
+    with open(FETCHER_TMP_FILE1) as file:
+        data = file.read()
+    print(data)
+    print(type(data))
+    data = eval(data)
+    print(type(data))
+    print(data["_id"])
+
+    db7 = m7client[dbname]
+    db7cl = db7["stud_tble"]
+    db7cl.insert_one(data)
